@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "*.html": "django-html",
+        "*.djhtml": "django-html",
+        "8192cd_headers.h": "c"
+    }
+}

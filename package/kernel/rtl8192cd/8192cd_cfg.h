@@ -327,7 +327,7 @@ void rtl819x_gpio_pin_set_val(unsigned int pin, int val);
 
 #define POWER_MIN_CHECK(a,b)            (((a) > (b)) ? (b) : (a))
 #define POWER_MIN_INDEX(a)            (((a) > 0) ? (a) : 0)
-#define POWER_RANGE_CHECK(val)		(((val) > 0x3f)? 0x3f : ((val < 0) ? 0 : val))
+#define POWER_RANGE_CHECK(val)		(((val) > 0xff)? 0xff : ((val < 0) ? 0 : val))//tx_interes
 #define COUNT_SIGN_OFFSET(val, oft)	(((oft & 0x08) == 0x08)? (val - (0x10 - oft)) : (val + oft))
 
 //-------------------------------------------------------------

@@ -456,7 +456,9 @@ rtl8192cd-objs +=\
 	HalDMOutSrc.o\
 	Beamforming.o\
 	8192cd_11h.o\
+	rtl8192cd_test.o\
 	$(obj-mesh)
+
 	
 ifeq ($(CONFIG_RTL_A4_STA_SUPPORT),y)
 obj-y += 8192cd_a4_sta.o

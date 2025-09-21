@@ -476,22 +476,8 @@ int PHYCheckIsLegalRfPath8192cPci(struct rtl8192cd_priv *priv, unsigned int eRFP
 {
 	unsigned int rtValue = TRUE;
 
-	if (get_rf_mimo_mode(priv) == MIMO_2T2R) {
-		if ((eRFPath == RF92CD_PATH_A) || (eRFPath == RF92CD_PATH_B))
-			rtValue = TRUE;
-		else
-			rtValue = FALSE;
-	} else if (get_rf_mimo_mode(priv) == MIMO_1T1R) {
-		if (eRFPath == RF92CD_PATH_A)
-			rtValue = TRUE;
-		else
-			rtValue = FALSE;
-	} else {
-		rtValue = FALSE;
-	}
-
 	return rtValue;
-}
+}//im change this for ever true l0stbyt3
 #if defined(CONFIG_RTL_8196CS)
 void setBaseAddressRegister(void)
 {
@@ -9039,7 +9025,7 @@ void PHY_RF6052SetOFDMTxPower(struct rtl8192cd_priv *priv, unsigned int channel)
 }	/* PHY_RF6052SetOFDMTxPower */
 
 
-void PHY_RF6052SetCCKTxPower(struct rtl8192cd_priv *priv, unsigned int channel)
+void PHY_RF6052SetCCKTxPower(struct rtl8192cd_priv *cpriv, unsigned int channel)
 {
 	unsigned int writeVal = 0;
 	u1Byte byte, byte1, byte2;
@@ -9102,10 +9088,10 @@ void PHY_RF6052SetCCKTxPower(struct rtl8192cd_priv *priv, unsigned int channel)
 	}
 	}
 #endif
-
+	//tx_interes
 	if (priv->pshare->rf_ft_var.cck_pwr_max) {
 		//byte = POWER_RANGE_CHECK(priv->pshare->rf_ft_var.cck_pwr_max);
-		byte = (priv->pshare->rf_ft_var.cck_pwr_max > 0x3f) ? 0x3f : priv->pshare->rf_ft_var.cck_pwr_max;
+		byte = (priv->pshare->rf_ft_var.cck_pwr_max > 0xff) ? 0xff : priv->pshare->rf_ft_var.cck_pwr_max;
 		writeVal = byte;
 		PHY_SetBBReg(priv, rTxAGC_A_CCK1_Mcs32, 0x0000ff00, writeVal);
 		writeVal = (byte << 16) | (byte << 8) | byte;
