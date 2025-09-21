@@ -99,11 +99,11 @@ static bool is_sensitive_reg(unsigned int addr, unsigned int *val)
     switch (addr)
     {
     case TXAGC_A:
-        if (*val > 0x3F)
+        if (*val > 0xff)
         {
-            pr_warn("rtl8192cd_test: TXAGC_A 0x%04x = 0x%x > 0x3F; forzando 0x3F\n",
+            pr_warn("rtl8192cd_test: TXAGC_A 0x%04x = 0x%x > 0xFF; forzando 0xff\n",
                     addr, *val);
-            *val = 0x3F; // clamp 6 bits
+            *val = 0xff; // clamp 6 bits
         }
         return false; // permitir escritura con valor ajustado
 
