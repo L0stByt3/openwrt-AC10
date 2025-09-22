@@ -1,5 +1,5 @@
 // rtl8192cd_test.c - Sysfs para leer/escribir registros RF/BB del 8192cd con salvaguardas
-// Compatible con kernels ~3.18 (OpenWrt vendeado)
+// Compatible con kernels ~3.18 (OpenWrt vendoreado)
 //
 // Compilar out-of-tree:
 //   obj-m += rtl8192cd_test.o
@@ -52,13 +52,14 @@ static struct rtl8192cd_priv *get_priv(void)
     return priv;
 }
 
-// ---------- Accesos BB/RF reales (vía helpers del driver) ----------
+// ---------- Accesos BB/RF reales ----------
+// Opción A: usar macros RTL_R32(addr) / RTL_W32(addr, val) con su firma real
 static int my_write_bb_reg(struct rtl8192cd_priv *priv, unsigned int addr,
                            unsigned int mask, unsigned int val)
 {
-    unsigned int old_val = RTL_R32(priv, addr);
+    unsigned int old_val = RTL_R32(addr); // <- sin 'priv'
     unsigned int new_val = (old_val & ~mask) | (val & mask);
-    RTL_W32(priv, addr, new_val);
+    RTL_W32(addr, new_val); // <- sin 'priv'
     pr_info("rtl8192cd_test: BB write addr=0x%04x mask=0x%08x val=0x%08x if=%s\n",
             addr, mask, new_val, interface_name);
     return 0;
@@ -77,7 +78,7 @@ static int my_write_rf_reg(struct rtl8192cd_priv *priv, unsigned int reg_addr,
 static int my_read_bb_reg(struct rtl8192cd_priv *priv, unsigned int addr,
                           unsigned int *out)
 {
-    *out = RTL_R32(priv, addr);
+    *out = RTL_R32(addr); // <- sin 'priv'
     pr_info("rtl8192cd_test: BB read addr=0x%04x -> 0x%08x if=%s\n",
             addr, *out, interface_name);
     return 0;
@@ -103,7 +104,7 @@ static bool is_sensitive_reg(unsigned int addr, unsigned int *val)
         {
             pr_warn("rtl8192cd_test: TXAGC_A 0x%04x = 0x%x > 0xFF; forzando 0xff\n",
                     addr, *val);
-            *val = 0xff; // clamp 6 bits
+            *val = 0xff; // clamp
         }
         return false; // permitir escritura con valor ajustado
 
