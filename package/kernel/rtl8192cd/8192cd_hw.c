@@ -9024,23 +9024,25 @@ void PHY_RF6052SetOFDMTxPower(struct rtl8192cd_priv *priv, unsigned int channel)
 	RTL_W32(rTxAGC_B_Mcs15_Mcs12, writeVal);
 }	/* PHY_RF6052SetOFDMTxPower */
 
-
+//tx_interes
 void PHY_RF6052SetCCKTxPower(struct rtl8192cd_priv *cpriv, unsigned int channel)
 {
+	struct rtl8192cd_priv *priv = cpriv;
+
 	unsigned int writeVal = 0;
 	u1Byte byte, byte1, byte2;
-	u1Byte pwrlevelCCK_A = priv->pmib->dot11RFEntry.pwrlevelCCK_A[channel - 1];
-	u1Byte pwrlevelCCK_B = priv->pmib->dot11RFEntry.pwrlevelCCK_B[channel - 1];
+	u1Byte pwrlevelCCK_A = cpriv->pmib->dot11RFEntry.pwrlevelCCK_A[channel - 1];
+	u1Byte pwrlevelCCK_B = cpriv->pmib->dot11RFEntry.pwrlevelCCK_B[channel - 1];
 #ifdef POWER_PERCENT_ADJUSTMENT
 	s1Byte pwrdiff_percent = PwrPercent2PwrLevel(priv->pmib->dot11RFEntry.power_percent);
 #endif
 
 #if defined(CONFIG_RTL_92D_SUPPORT) && defined(CONFIG_RTL_92D_DMDP)
 	if (GET_CHIP_VER(priv) == VERSION_8192D) {
-		if (priv->pmib->dot11RFEntry.macPhyMode == DUALMAC_DUALPHY &&
+		if (cpriv->pmib->dot11RFEntry.macPhyMode == DUALMAC_DUALPHY &&
 				priv->pshare->wlandev_idx == 1) {
-			if (priv->pmib->dot11RFEntry.phyBandSelect & PHY_BAND_2G)  {
-				pwrlevelCCK_A = priv->pmib->dot11RFEntry.pwrlevelCCK_B[channel - 1];
+			if (cpriv->pmib->dot11RFEntry.phyBandSelect & PHY_BAND_2G)  {
+				pwrlevelCCK_A = cpriv->pmib->dot11RFEntry.pwrlevelCCK_B[channel - 1];
 			}
 		}
 	}
