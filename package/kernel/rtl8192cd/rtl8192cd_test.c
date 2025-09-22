@@ -1,9 +1,10 @@
 // rtl8192cd_test.c - Sysfs para leer/escribir registros RF/BB del 8192cd con salvaguardas
 // Compatible con kernels ~3.18 (OpenWrt vendoreado)
 //
-// Compilar out-of-tree:
-//   obj-m += rtl8192cd_test.o
-//   EXTRA_CFLAGS += -I$(PWD)/package/kernel/rtl8192cd
+// Nota (opción A):
+//  - Este archivo se COMPILA junto con el driver realtek, pero NO define
+//    module_init()/module_exit() para evitar colisiones con el módulo principal.
+//  - Expone rtl8192cd_test_sysfs_init()/exit() para que el driver las invoque.
 //
 // Author: tu_nombre
 // License: GPL
@@ -28,8 +29,8 @@
 
 // Registros sensibles (direcciones BB/RF usadas como ejemplo)
 #define REG_CR 0x0100   // Control Register (TX/RX enable) - BB
-#define TXAGC_A 0x0c90  // TX Gain Control                - BB
-#define RF_SYNTH 0x000f // RF Synthesizer Control         - RF
+#define TXAGC_A 0x0c90  // TX Gain Control                 - BB
+#define RF_SYNTH 0x000f // RF Synthesizer Control          - RF
 
 static struct kobject *rtl_test_kobj;
 static DEFINE_MUTEX(rtl_test_lock);
@@ -53,13 +54,13 @@ static struct rtl8192cd_priv *get_priv(void)
 }
 
 // ---------- Accesos BB/RF reales ----------
-// Opción A: usar macros RTL_R32(addr) / RTL_W32(addr, val) con su firma real
+// Opción A: usar macros RTL_R32(addr) / RTL_W32(addr, val) con su firma real (sin 'priv')
 static int my_write_bb_reg(struct rtl8192cd_priv *priv, unsigned int addr,
                            unsigned int mask, unsigned int val)
 {
-    unsigned int old_val = RTL_R32(addr); // <- sin 'priv'
+    unsigned int old_val = RTL_R32(addr);
     unsigned int new_val = (old_val & ~mask) | (val & mask);
-    RTL_W32(addr, new_val); // <- sin 'priv'
+    RTL_W32(addr, new_val);
     pr_info("rtl8192cd_test: BB write addr=0x%04x mask=0x%08x val=0x%08x if=%s\n",
             addr, mask, new_val, interface_name);
     return 0;
@@ -78,7 +79,7 @@ static int my_write_rf_reg(struct rtl8192cd_priv *priv, unsigned int reg_addr,
 static int my_read_bb_reg(struct rtl8192cd_priv *priv, unsigned int addr,
                           unsigned int *out)
 {
-    *out = RTL_R32(addr); // <- sin 'priv'
+    *out = RTL_R32(addr);
     pr_info("rtl8192cd_test: BB read addr=0x%04x -> 0x%08x if=%s\n",
             addr, *out, interface_name);
     return 0;
@@ -306,8 +307,8 @@ static ssize_t tx_power_read_show(struct kobject *kobj,
 static struct kobj_attribute tx_power_read_attr =
     __ATTR(tx_power_read, 0444, tx_power_read_show, NULL);
 
-// ---------- Init / Exit ----------
-static int __init rtl_test_init(void)
+// ---------- Init / Exit “embebidos” (SIN module_init/module_exit) ----------
+int rtl8192cd_test_sysfs_init(void)
 {
     int ret = 0;
 
@@ -331,14 +332,16 @@ static int __init rtl_test_init(void)
     {
         pr_err("rtl8192cd_test: Falló la creación de archivos sysfs\n");
         kobject_put(rtl_test_kobj);
+        rtl_test_kobj = NULL;
         return ret;
     }
 
     pr_info("rtl8192cd_test: sysfs listo, interfaz por defecto: %s\n", interface_name);
     return 0;
 }
+EXPORT_SYMBOL_GPL(rtl8192cd_test_sysfs_init);
 
-static void __exit rtl_test_exit(void)
+void rtl8192cd_test_sysfs_exit(void)
 {
     if (rtl_test_kobj)
     {
@@ -351,13 +354,13 @@ static void __exit rtl_test_exit(void)
         sysfs_remove_file(rtl_test_kobj, &bb_read_params_attr.attr);
         sysfs_remove_file(rtl_test_kobj, &tx_power_read_attr.attr);
         kobject_put(rtl_test_kobj);
+        rtl_test_kobj = NULL;
     }
     pr_info("rtl8192cd_test: sysfs descargado\n");
 }
+EXPORT_SYMBOL_GPL(rtl8192cd_test_sysfs_exit);
 
-module_init(rtl_test_init);
-module_exit(rtl_test_exit);
-
+// No module_init/module_exit aquí para evitar colisión con el módulo principal
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("tu_nombre");
-MODULE_DESCRIPTION("Sysfs interface for safe RF/BB register access on RTL8192CD with dynamic interface");
+MODULE_AUTHOR("l0stbyt3");
+MODULE_DESCRIPTION("Sysfs interface for safe RF/BB register access on RTL8192CD with dynamic interface (embedded init/exit)");

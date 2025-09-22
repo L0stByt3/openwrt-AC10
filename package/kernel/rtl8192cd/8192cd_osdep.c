@@ -14742,20 +14742,50 @@ int rtl8192cd_init(unsigned long base_addr)
 int MDL_INIT rtl8192cd_init(void)
 {
 #ifdef USE_DMA_ALLOCATE
-	int ret;
-	printk("****** %s %d\n", __FUNCTION__, __LINE__);
-	ret = misc_register(&cma_dev_misc);
-	if (unlikely(ret)) {
-		printk("****** %s %d, failed(%d) to register cma_dev_fops misc device!\n", __FUNCTION__, __LINE__, ret);
-		cma_dev = NULL;
-	}
-	else {
-		cma_dev = cma_dev_misc.this_device;
-		cma_dev->coherent_dma_mask = ~0;
-		printk("****** %s %d, cma_dev %pa\n", __FUNCTION__, __LINE__, &cma_dev);
-	}
+    int ret;
+    printk("****** %s %d\n", __FUNCTION__, __LINE__);
+    ret = misc_register(&cma_dev_misc);
+    if (unlikely(ret)) {
+        printk("****** %s %d, failed(%d) to register cma_dev_fops misc device!\n",
+               __FUNCTION__, __LINE__, ret);
+        cma_dev = NULL;
+    }
+    else {
+        cma_dev = cma_dev_misc.this_device;
+        cma_dev->coherent_dma_mask = ~0;
+        printk("****** %s %d, cma_dev %pa\n", __FUNCTION__, __LINE__, &cma_dev);
+    }
+#endif
+int  rtl8192cd_test_sysfs_init(void);
+void rtl8192cd_test_sysfs_exit(void);
+#if defined(CONFIG_RTL_ULINKER_WLAN_DELAY_INIT)
+    /* don't init wlan while kernel startup */
+    static char initated = 0;
+    if (initated == 0)
+        initated = 1;
+    else
+        return 0;
 #endif
 
+    /* ------------------------------------------------------------
+     *  ...AQUÍ VA TU INIT NORMAL DEL DRIVER...
+     *  (No lo toco; conserva todo tu flujo actual)
+     * ------------------------------------------------------------ */
+
+    /* === HOOK sysfs (insertar aquí): NO aborta si falla === */
+    {
+        int sret = rtl8192cd_test_sysfs_init();
+        if (sret)
+            pr_warn("rtl8192cd_test: sysfs no inicializado (%d), continuando\n", sret);
+    }
+    /* === FIN HOOK sysfs === */
+
+    return 0;
+
+    /* Si tu init tiene labels de error (goto err_out:), NO pongas el hook
+       antes de los posibles fallos; colócalo SIEMPRE en el camino de éxito,
+       justo antes del return 0. */
+}
 #if defined(CONFIG_RTL_ULINKER_WLAN_DELAY_INIT)
 	static char initated = 0;
 	if (initated == 0)
@@ -14868,111 +14898,111 @@ void MDL_EXIT rtl8192cd_exit (void)
 #else // not __KERNEL__
 void MDL_EXIT rtl8192cd_exit(void *data)
 {
-	struct net_device *dev = (struct net_device *)data;
-	struct rtl8192cd_priv *priv = dev->priv;
-	int idx, i;
+    struct net_device *dev = (struct net_device *)data;
+    struct rtl8192cd_priv *priv = dev->priv;
+    int idx, i;
 
-	for (idx=0; idx<sizeof(wlan_device)/sizeof(struct _device_info_); idx++)
-		if (wlan_device[idx].priv == priv)
-			break;
+    for (idx=0; idx<sizeof(wlan_device)/sizeof(struct _device_info_); idx++)
+        if (wlan_device[idx].priv == priv)
+            break;
 
-	if (idx == sizeof(wlan_device)/sizeof(struct _device_info_))
-		return;		// wrong argument!!
+    if (idx == sizeof(wlan_device)/sizeof(struct _device_info_))
+        return;     // wrong argument!!
 
 #ifdef WDS
-	{
-		int num;
+    {
+        int num;
 
-		num = (wlan_device[idx].type >> WDS_SHIFT) & WDS_MASK;
-		for (i=0; i<num; i++) {
-			wlan_device[idx].priv->pmib->dot11WdsInfo.dev[i]->priv = NULL;
-			unregister_netdev(wlan_device[idx].priv->pmib->dot11WdsInfo.dev[i]);
-			kfree(wlan_device[idx].priv->pmib->dot11WdsInfo.dev[i]);
-		}
-	}
+        num = (wlan_device[idx].type >> WDS_SHIFT) & WDS_MASK;
+        for (i=0; i<num; i++) {
+            wlan_device[idx].priv->pmib->dot11WdsInfo.dev[i]->priv = NULL;
+            unregister_netdev(wlan_device[idx].priv->pmib->dot11WdsInfo.dev[i]);
+            kfree(wlan_device[idx].priv->pmib->dot11WdsInfo.dev[i]);
+        }
+    }
 #endif
 
-	unregister_netdev(dev);
+    unregister_netdev(dev);
 
-	kfree(priv->pmib);
+    kfree(priv->pmib);
 
-#ifdef	CONFIG_RTK_MESH
+#ifdef  CONFIG_RTK_MESH
 
-	if(priv->proxy_table)
-	{
-		remove_hash_table(priv->proxy_table);
-		kfree(priv->proxy_table);
-	}
-	if(priv->mesh_rreq_retry_queue)
-	{
-		remove_hash_table(priv->mesh_rreq_retry_queue);
-		kfree(priv->mesh_rreq_retry_queue);
-	}
+    if (priv->proxy_table)
+    {
+        remove_hash_table(priv->proxy_table);
+        kfree(priv->proxy_table);
+    }
+    if (priv->mesh_rreq_retry_queue)
+    {
+        remove_hash_table(priv->mesh_rreq_retry_queue);
+        kfree(priv->mesh_rreq_retry_queue);
+    }
 
-	// add by chuangch 2007.09.13
-	if(priv->pathsel_table)
-	{
-		remove_hash_table(priv->pathsel_table);
-		kfree(priv->pathsel_table);
-	}
+    // add by chuangch 2007.09.13
+    if (priv->pathsel_table)
+    {
+        remove_hash_table(priv->pathsel_table);
+        kfree(priv->pathsel_table);
+    }
 
-	if(priv->pann_mpp_tb)
-		kfree(priv->pann_mpp_tb);
+    if (priv->pann_mpp_tb)
+        kfree(priv->pann_mpp_tb);
 
-	kfree(priv->pathsel_queue);
-#ifdef	_MESH_ACL_ENABLE_
-	kfree(priv->pmesh_acl_poll);
+    kfree(priv->pathsel_queue);
+#ifdef  _MESH_ACL_ENABLE_
+    kfree(priv->pmesh_acl_poll);
 #endif
-#endif	// CONFIG_RTK_MESH
+#endif  // CONFIG_RTK_MESH
 
-	kfree(priv->pevent_queue);
+    kfree(priv->pevent_queue);
 #ifdef CONFIG_RTL_WAPI_SUPPORT
-//	kfree(vxd_priv->wapiEvent_queue);
-	kfree(priv->wapiEvent_queue);
-	#ifdef MBSSID
-	if (IS_ROOT_INTERFACE(priv)&&priv->pmib->miscEntry.vap_enable)	{
-		for (i=0; i<RTL8192CD_NUM_VWLAN; i++)
-			kfree(priv->pvap_priv[i]->wapiEvent_queue);
-	}
-	#endif
+//  kfree(vxd_priv->wapiEvent_queue);
+    kfree(priv->wapiEvent_queue);
+    #ifdef MBSSID
+    if (IS_ROOT_INTERFACE(priv) && priv->pmib->miscEntry.vap_enable) {
+        for (i=0; i<RTL8192CD_NUM_VWLAN; i++)
+            kfree(priv->pvap_priv[i]->wapiEvent_queue);
+    }
+    #endif
 #endif
 #ifdef CONFIG_IEEE80211R
-	kfree(priv->pftevent_queue);
+    kfree(priv->pftevent_queue);
 #endif
 
 #ifndef PRIV_STA_BUF
-	kfree((void *)priv->pshare->phw->alloc_dma_buf);
+    kfree((void *)priv->pshare->phw->alloc_dma_buf);
 
 #ifndef USE_DMA_ALLOCATE
-	kfree(priv->pshare->phw);
+    kfree(priv->pshare->phw);
 #else
-	if (priv->pshare->phw) {
-		dma_free_coherent(cma_dev, sizeof(struct rtl8192cd_hw), priv->pshare->phw, priv->pshare->hw_dma_phys);
-		priv->pshare->phw = NULL;
-		priv->pshare->hw_dma_phys = NULL;
-	}
+    if (priv->pshare->phw) {
+        dma_free_coherent(cma_dev, sizeof(struct rtl8192cd_hw), priv->pshare->phw, priv->pshare->hw_dma_phys);
+        priv->pshare->phw = NULL;
+        priv->pshare->hw_dma_phys = NULL;
+    }
 #endif
-	kfree(priv->pshare->pwlan_hdr_poll);
-	kfree(priv->pshare->pwlanllc_hdr_poll);
-	kfree(priv->pshare->pwlanbuf_poll);
-	kfree(priv->pshare->pwlanicv_poll);
-	kfree(priv->pshare->pwlanmic_poll);
+    kfree(priv->pshare->pwlan_hdr_poll);
+    kfree(priv->pshare->pwlanllc_hdr_poll);
+    kfree(priv->pshare->pwlanbuf_poll);
+    kfree(priv->pshare->pwlanicv_poll);
+    kfree(priv->pshare->pwlanmic_poll);
 #endif
-	kfree(priv->pwlan_acl_poll);
-	kfree(priv->Eap_packet);
+    kfree(priv->pwlan_acl_poll);
+    kfree(priv->Eap_packet);
 #if defined(INCLUDE_WPA_PSK) || defined(WIFI_HAPD) || defined(RTK_NL80211)
-	kfree(priv->wpa_global_info);
+    kfree(priv->wpa_global_info);
 #endif
-	free_site_survey_res(priv->site_survey);
+    free_site_survey_res(priv->site_survey);
 #ifndef PRIV_STA_BUF
-	kfree(priv->pshare);	// david
+    kfree(priv->pshare);    // david
 #endif
-	kfree(dev);
+    kfree(dev);
 
 #ifdef EN_EFUSE
-	for( i = 0 ; i < 2 ; i++ )
-		kfree(priv->EfuseMap[i]);
-	kfree(priv->EfuseCmd);
+    for ( i = 0 ; i < 2 ; i++ )
+        kfree(priv->EfuseMap[i]);
+    kfree(priv->EfuseCmd);
 #endif
 
 #ifdef CONFIG_WLAN_HAL
@@ -14982,9 +15012,15 @@ void MDL_EXIT rtl8192cd_exit(void *data)
     }
 #endif //CONFIG_WLAN_HAL
 
-	wlan_device[idx].priv = NULL;
+    wlan_device[idx].priv = NULL;
 
-	wlan_index--;
+    /* Cerrar el sysfs auxiliar si ESTE era el ÚLTIMO dispositivo activo.
+       Antes de decrementar, wlan_index==1 significa que tras este exit quedará en 0. */
+    if (wlan_index == 1) {
+        rtl8192cd_test_sysfs_exit();
+    }
+
+    wlan_index--;
 }
 #endif
 #endif // !__EOCS
