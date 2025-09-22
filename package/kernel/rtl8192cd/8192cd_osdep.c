@@ -15022,7 +15022,6 @@ void MDL_EXIT rtl8192cd_exit(void *data)
 
     wlan_index--;
 }
-#endif
 #endif // !__EOCS
 
 
